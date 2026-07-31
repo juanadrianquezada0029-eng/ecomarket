@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+ecomarket.db
+modelo_svm.joblib
+.vscode/
+.claude/
