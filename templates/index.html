@@ -17,9 +17,35 @@
                 <span class="brand-mark" aria-hidden="true"></span>
                 <span class="brand-name">EcoMarket</span>
             </a>
-            <button class="btn btn-primary" id="toggle-form">Registrar producto</button>
+            <div class="header-actions">
+                <button class="btn btn-cart" id="toggle-cart" aria-haspopup="dialog" aria-controls="cart-drawer" aria-expanded="false">
+                    <svg class="cart-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h2l.4 2M7 13h10l3-8H5.4M7 13L5.4 5M7 13l-1.6 4.4A1 1 0 0 0 6.35 19H18M9 22a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm9 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Carrito</span>
+                    <span class="cart-badge" id="cart-badge" hidden>0</span>
+                </button>
+                <button class="btn btn-primary" id="toggle-form">Registrar producto</button>
+            </div>
         </div>
     </header>
+
+    <div class="cart-overlay" id="cart-overlay" hidden></div>
+    <aside class="cart-drawer" id="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-drawer-title" hidden>
+        <div class="cart-drawer-head">
+            <h2 id="cart-drawer-title">Tu carrito</h2>
+            <button class="btn-icon" id="close-cart" aria-label="Cerrar carrito">&times;</button>
+        </div>
+        <div class="cart-drawer-body" id="cart-items">
+            <p class="cart-empty" id="cart-empty">Tu carrito está vacío. Agrega productos del catálogo.</p>
+        </div>
+        <div class="cart-drawer-foot">
+            <div class="cart-total-row">
+                <span>Total</span>
+                <strong id="cart-total">$0.00</strong>
+            </div>
+            <button class="btn btn-primary btn-submit" id="cart-checkout" disabled>Finalizar compra</button>
+            <button class="btn-link" id="cart-clear">Vaciar carrito</button>
+        </div>
+    </aside>
 
     <main id="top">
         <section class="hero">
@@ -51,13 +77,17 @@
             </div>
             <div class="grid-productos" id="productos-list">
                 {% for producto in productos %}
-                <article class="card-producto">
+                <article class="card-producto" data-id="{{ producto.id }}" data-precio="{{ producto.precio }}">
+                    <button type="button" class="card-delete" data-action="eliminar" aria-label="Eliminar {{ producto.nombre }}" title="Eliminar producto">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0-.8 12.1a2 2 0 0 1-2 1.9H8.8a2 2 0 0 1-2-1.9L6 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
                     <div class="card-producto-top">
                         <h3>{{ producto.nombre }}</h3>
                         <p class="precio">${{ "%.2f" | format(producto.precio) }}</p>
                     </div>
                     <span class="categoria"><i aria-hidden="true"></i>{{ producto.categoria }}</span>
                     <p class="descripcion">{{ producto.descripcion }}</p>
+                    <button type="button" class="btn btn-add-cart" data-action="agregar-carrito">Agregar al carrito</button>
                 </article>
                 {% endfor %}
             </div>
@@ -96,9 +126,9 @@
 
         <section class="sentimientos">
             <div class="sentimientos-header">
-                <span class="eyebrow">Analizador IA</span>
+                <span class="eyebrow">Analizador de emociones IA</span>
                 <h2>Analiza una opinión</h2>
-                <p>Escribe un texto y el modelo (BETO + SVM) predice el sentimiento en segundos.</p>
+                <p>Escribe un texto y el modelo (BETO + SVM) detecta la emoción/sentimiento en segundos: positivo, negativo o neutral.</p>
             </div>
             <div class="sentimientos-panel">
                 <form id="opinion-form" class="form-eco opinion-form">
@@ -112,7 +142,8 @@
                     <p class="feedback" id="opinion-feedback" role="status"></p>
                 </form>
                 <div class="sentimiento-result" id="resultado-sentimiento" hidden>
-                    <span class="sentimiento-label">Sentimiento detectado</span>
+                    <span class="sentimiento-label">Emoción detectada</span>
+                    <span class="sentimiento-emoji" id="sentimiento-emoji" aria-hidden="true">—</span>
                     <strong id="sentimiento-text">—</strong>
                 </div>
             </div>
@@ -124,8 +155,10 @@
                 <h2>Resumen de opiniones</h2>
             </div>
             <div class="resumen-grid" id="resumen-grid">
+                {% set emojis = {'positivo': '😊', 'negativo': '😞', 'neutral': '😐'} %}
                 {% for sent, cantidad in resumen %}
                 <div class="resumen-card" data-sentimiento="{{ sent }}">
+                    <span class="resumen-emoji" aria-hidden="true">{{ emojis.get(sent, '🙂') }}</span>
                     <strong>{{ cantidad }}</strong>
                     <p>{{ sent.capitalize() }}</p>
                 </div>

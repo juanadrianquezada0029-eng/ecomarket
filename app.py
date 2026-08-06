@@ -3,6 +3,7 @@ import sqlite3
 from flask import Flask, render_template, request, jsonify
 from servicios import GestorEcoMarket
 from ml_analizador import AnalizadorOpiniones
+from excepciones import ProductoNoEncontradoError, ProductoInvalidoError
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DB_PATH = os.path.join(BASE_DIR, "ecomarket.db")
@@ -15,7 +16,7 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     return response
 
@@ -70,7 +71,7 @@ def api_crear_producto():
     if request.method == "OPTIONS":
         return jsonify({"success": True}), 200
 
-    data = request.json
+    data = request.get_json(silent=True) or {}
     try:
         nombre = data.get("nombre")
         precio = float(data.get("precio", 0))
@@ -90,6 +91,25 @@ def api_crear_producto():
                 "descripcion": producto.descripcion,
             }
         }), 201
+    except ProductoInvalidoError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "El precio debe ser un número válido."}), 400
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@app.route("/api/productos/<int:producto_id>", methods=["DELETE", "OPTIONS"])
+def api_eliminar_producto(producto_id):
+    if request.method == "OPTIONS":
+        return jsonify({"success": True}), 200
+
+    try:
+        gestor = GestorEcoMarket()
+        gestor.eliminar_producto(producto_id)
+        return jsonify({"success": True, "id": producto_id}), 200
+    except ProductoNoEncontradoError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 404
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 400
 
@@ -99,8 +119,11 @@ def api_analizar_opinion():
     if request.method == "OPTIONS":
         return jsonify({"success": True}), 200
 
-    data = request.json
-    texto = data.get("texto", "")
+    data = request.get_json(silent=True) or {}
+    texto = (data.get("texto") or "").strip()
+
+    if not texto:
+        return jsonify({"success": False, "error": "Escribe una opinión antes de analizarla."}), 400
 
     try:
         analizador = inicializar_modelo()
